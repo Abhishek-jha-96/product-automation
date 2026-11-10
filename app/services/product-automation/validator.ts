@@ -178,6 +178,17 @@ export function validateRow(
   const productNumber = (raw["PRODUCT NUMER"] || raw["PRODUCT NUMBER"] || "").toString().trim() || undefined;
 
   let productStatus: "ACTIVE" | "DRAFT" = "ACTIVE";
+  
+  // Already Processed Product
+  if (raw["Status"] == "Done") {
+    errors.push({
+      row: rowNumber,
+      field: "Status",
+      message: 'Status is "Done". Already processed move to next in the sheet.',
+      value: raw["Status"],
+    })
+  }
+  
   if (raw["Status"]) {
     const s = String(raw["Status"]).trim().toUpperCase();
     if (s === "DRAFT" || s === "INACTIVE" || s === "ARCHIVED") {

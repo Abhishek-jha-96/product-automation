@@ -1,3 +1,6 @@
+import fs from "fs";
+import path from "path";
+
 import type {
   AdminGraphqlClient,
 } from "./shopify-client.ts";
@@ -120,24 +123,56 @@ async function processSingleProduct(
       );
     }
 
-    // 4. Attach Media if Link is provided
-    if (item.link) {
-      try {
-        const mediaAttached = await attachProductMedia(
-          admin,
-          productId,
-          item.link,
-          item.title,
-        );
-        result.mediaStatus = mediaAttached ? "ATTACHED" : "FAILED";
-      } catch (medErr) {
-        console.warn(`Media attachment warning for "${item.title}":`, medErr);
-        result.mediaStatus = "FAILED";
-        result.errors = result.errors || [];
-        result.errors.push(`Media error: ${(medErr as Error).message}`);
+    // 4. Attach Media if image exists
+    const folderPath = path.join(
+      process.cwd(),
+      "public",
+      String(item.productNumber)
+    );
+
+    try {
+      if (fs.existsSync(folderPath)) {
+        // Get all image files from the product folder
+        const imageFiles = fs
+          .readdirSync(folderPath)
+          .filter((file) => /\.(jpg|jpeg|png|webp|gif)$/i.test(file));
+
+        if (imageFiles.length > 0) {
+          const imageUrls = imageFiles.map(
+            (file) => `/${item.productNumber}/${file}`
+          );
+
+          for (const imageUrl of imageUrls) {
+            const mediaAttached = await attachProductMedia(
+              admin,
+              productId,
+              imageUrl,
+              item.title
+            );
+
+            if (!mediaAttached) {
+              throw new Error(`Failed to attach image: ${imageUrl}`);
+            }
+          }
+
+          result.mediaStatus = "ATTACHED";
+        } else {
+          result.mediaStatus = "SKIPPED";
+        }
+      } else {
+        result.mediaStatus = "SKIPPED";
       }
-    } else {
-      result.mediaStatus = "SKIPPED";
+    } catch (medErr) {
+      console.warn(
+        `Media attachment warning for "${item.title}":`,
+        medErr
+      );
+
+      result.mediaStatus = "FAILED";
+      result.errors = result.errors || [];
+      result.errors.push(
+        `Media error: ${(medErr as Error).message}`
+      );
     }
 
     return result;

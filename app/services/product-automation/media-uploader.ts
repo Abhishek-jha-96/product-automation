@@ -36,12 +36,7 @@ export async function attachProductMedia(
     return false;
   }
 
-  // Case 1: Remote HTTP/HTTPS URL
-  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
-    return attachRemoteMedia(admin, productId, trimmed, altText);
-  }
-
-  // Case 2: Local file path
+  // Local file path
   const resolvedPath = path.isAbsolute(trimmed)
     ? trimmed
     : path.resolve(process.cwd(), trimmed);
